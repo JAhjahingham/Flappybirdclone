@@ -317,7 +317,18 @@
         let frameCount = 0;
         let gameLoopId;
 
-        // --- Utility Functions ---
+        // --- Utility Functions (Moved up to ensure definition before calls) ---
+
+        /**
+         * Resizes the canvas to maintain aspect ratio and fill the container.
+         * Set fixed logical dimensions.
+         */
+        function resizeCanvas() {
+            canvas.width = 480;
+            canvas.height = 700;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
 
         /**
          * Real-time function to display the global leaderboard.
@@ -328,6 +339,7 @@
                 return;
             }
 
+            // Path: /artifacts/{appId}/public/data/leaderboard
             const leaderboardCollectionRef = collection(db, `artifacts/${appId}/public/data/leaderboard`);
 
             // Query for the top 10 scores, sorted by score descending
@@ -349,8 +361,8 @@
                     listItem.className = isCurrentUser ? 'highlight' : '';
                     listItem.innerHTML = `
                         <span class="score-rank">${rank}.</span>
-                        <span class="score-value">${scoreData.score}</span>
                         <span class="user-id-short">${isCurrentUser ? 'YOU' : scoreData.userId}</span>
+                        <span class="score-value">${scoreData.score}</span>
                     `;
                     leaderboardList.appendChild(listItem);
                     rank++;
@@ -406,7 +418,7 @@
                         isAuthReady = true;
                         
                         // Start the game logic only after authentication is ready
-                        resizeCanvas();
+                        resizeCanvas(); // Now guaranteed to be defined
                         resetGame();
                         setupLeaderboardListener(); // Start listening for leaderboard changes
                     } else {
@@ -421,16 +433,6 @@
                 loadingIndicator.textContent = "Error: Failed to connect to database.";
             }
         }
-
-        /**
-         * Resizes the canvas to maintain aspect ratio and fill the container.
-         */
-        function resizeCanvas() {
-            // Set fixed logical dimensions
-            canvas.width = 480;
-            canvas.height = 700;
-        }
-        window.addEventListener('resize', resizeCanvas);
 
 
         // --- Game Objects ---
