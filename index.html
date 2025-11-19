@@ -31,7 +31,7 @@
             background-color: #34495e; 
             padding: 5px 0; 
             text-align: center;
-            margin-bottom: 5px; 
+            margin-bottom: 5px; /* Reduced margin */
             margin-top: 5px; 
             border: 2px solid #f39c12; 
             border-radius: 6px; 
@@ -46,31 +46,17 @@
         #ad-banner a {
             text-decoration: none;
             color: #ecf0f1;
-            /* Default/PC Font size for the paragraph text (e.g., "Military Surplus") */
             font-size: 0.65em; 
             display: block;
             line-height: 1.2; 
         }
 
-        /* Styling for ADVERTISEMENT line */
-        #ad-banner a p:first-of-type {
-            font-size: 0.5em; /* Smaller font for "ADVERTISEMENT" */
-            margin-bottom: 2px;
-        }
-
-        /* Styling for the main link (92YANKEE.NET) */
         #ad-banner strong {
             display: block;
-            /* MATCHING font size to the surrounding paragraph text */
-            font-size: 0.65em; 
+            font-size: 1.0em;
             color: #2ecc71; 
             text-shadow: 1px 1px 0px #1c2833;
             margin: 2px 0;
-        }
-
-        /* Styling for Military Surplus line */
-        #ad-banner a p:last-of-type {
-            margin-top: 2px;
         }
         /* ------------------ END AD BANNER STYLES ------------------ */
 
@@ -81,7 +67,9 @@
             background: #3c3c3c; 
             border-radius: 12px;
             box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 0 5px rgba(255, 255, 255, 0.2);
+            /* GREATLY REDUCED PADDING to make canvas fill more */
             padding: 5px; 
+            /* Removed max-width to allow better filling on large screens */
             width: 95vw; 
             max-height: 95vh; 
             display: flex;
@@ -95,7 +83,8 @@
             display: block;
             border-radius: 8px;
             touch-action: manipulation; 
-            width: 100%; 
+            width: 100%; /* Fill container width */
+            /* Use a common ratio for Flappy Bird to ensure it looks right */
             aspect-ratio: 480 / 700; 
             border: 4px solid #1c2833;
         }
@@ -103,11 +92,12 @@
 
         #score-display {
             position: absolute;
-            top: 15px; 
+            top: 15px; /* Adjusted position due to reduced container padding */
             left: 50%;
             transform: translateX(-50%);
             color: #fff;
             text-shadow: 3px 3px 0px #1c2833;
+            /* Using a relative font size so it scales better with canvas */
             font-size: 5vw; 
             z-index: 10;
             pointer-events: none;
@@ -179,21 +169,14 @@
                 width: 90%;
             }
             #ad-banner a {
-                /* Mobile base font size for Military Surplus line */
                 font-size: 0.6em; 
             }
-            /* Styling for ADVERTISEMENT line (Mobile) */
-            #ad-banner a p:first-of-type {
-                font-size: 0.45em; /* Even smaller for "ADVERTISEMENT" */
-            }
-            /* Styling for the main link (92YANKEE.NET) (Mobile) */
             #ad-banner strong {
-                /* MATCHING font size for "92YANKEE.NET" */
-                font-size: 0.6em;
+                font-size: 0.8em;
                 color: #2ecc71; 
             }
             #score-display {
-                font-size: 7vw; 
+                font-size: 7vw; /* Increased relative size for mobile score */
                 top: 10px;
             }
             #game-container {
@@ -242,15 +225,15 @@
         const restartButton = document.getElementById('restart-button');
 
         // --- Game Constants ---
-        const LOGICAL_WIDTH = 480; 
-        const LOGICAL_HEIGHT = 700; 
+        const LOGICAL_WIDTH = 480; // The fixed logical width for all game math
+        const LOGICAL_HEIGHT = 700; // The fixed logical height for all game math
         const BIRD_RADIUS = 15;
         const PIPE_WIDTH = 50;
         const PIPE_GAP = 150;
         const PIPE_SPEED = 2;
         const GRAVITY = 0.5;
         const JUMP_VELOCITY = -8;
-        const PIPE_SPAWN_INTERVAL = 100; 
+        const PIPE_SPAWN_INTERVAL = 100; // Frames
         const HIGH_SCORE_KEY = 'flappyHighScore';
 
         // --- Game State ---
@@ -269,7 +252,12 @@
             highScore = storedScore ? parseInt(storedScore, 10) : 0;
         }
 
+        /**
+         * Sets the internal canvas dimensions for drawing purposes.
+         * The game logic always uses LOGICAL_WIDTH and LOGICAL_HEIGHT.
+         */
         function resizeCanvas() {
+            // Set fixed logical dimensions for the drawing context
             canvas.width = LOGICAL_WIDTH;
             canvas.height = LOGICAL_HEIGHT;
         }
@@ -338,7 +326,7 @@
                 ctx.strokeStyle = '#16a085';
                 ctx.lineWidth = 3;
                 ctx.strokeRect(this.x, 0, this.width, this.gapY - this.gap / 2);
-                ctx.strokeRect(this.x, this.gapY + this.gap / 2, this.width, LOGICAL_HEIGHT - (this.gapY + self.gap / 2));
+                ctx.strokeRect(this.x, this.gapY + this.gap / 2, this.width, LOGICAL_HEIGHT - (this.gapY + this.gap / 2));
             }
 
             update() {
@@ -361,11 +349,13 @@
         function checkCollisions() {
             const floorThreshold = LOGICAL_HEIGHT - 90; // 90 is floor height
 
+            // 1. Check top/bottom collision
             if (bird.y - bird.radius <= 0 || bird.y + bird.radius >= floorThreshold) { 
                 endGame();
                 return;
             }
 
+            // 2. Check pipe collision
             for (let i = 0; i < pipes.length; i++) {
                 const p = pipes[i];
 
@@ -378,6 +368,7 @@
                         return;
                     }
 
+                    // Check for scoring
                     if (!p.passed && bird.x > p.x + p.width) {
                         score++;
                         p.passed = true;
@@ -389,7 +380,7 @@
 
         function spawnPipe() {
             const minGapY = 150;
-            const maxGapY = LOGICAL_HEIGHT - 150 - 90; 
+            const maxGapY = LOGICAL_HEIGHT - 150 - 90; // -90 for floor height
 
             const randomGapY = Math.floor(Math.random() * (maxGapY - minGapY + 1)) + minGapY;
             pipes.push(new Pipe(LOGICAL_WIDTH, randomGapY));
@@ -458,6 +449,7 @@
             frameCount = 0;
             scoreDisplay.textContent = score;
             pipes = [];
+            // Use LOGICAL dimensions for placement
             bird = new Bird(LOGICAL_WIDTH / 4, LOGICAL_HEIGHT / 2); 
             
             highScoreDisplaySpan.textContent = highScore; 
