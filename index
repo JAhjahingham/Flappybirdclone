@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bald Eagle Flight</title>
+    <style>
+        /* Base styling and font (unchanged) */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            /* Background: Forest/Mountain Sky */
+            background: linear-gradient(135deg, #a7d9f7 0%, #4682b4 100%); 
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden; 
+        }
+
+        #game-container {
+            position: relative;
+            background: #4a4a4a; /* Darker placeholder */
+            border-radius: 12px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 0 5px rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            max-width: 90vw; 
+            max-height: 90vh; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        canvas {
+            background-color: #87CEEB; /* Game sky - Lighter blue for forest setting */
+            display: block;
+            border-radius: 8px;
+            touch-action: manipulation; 
+            width: 100%; 
+            height: auto; 
+            border: 4px solid #1c2833;
+        }
+
+        /* Score, Message Box, and Button styles remain the same for functionality */
+        #score-display {
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            text-shadow: 3px 3px 0px #1c2833;
+            font-size: 2.5em;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #message-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            z-index: 20;
+            border: 4px solid #1c2833;
+            display: none; 
+        }
+
+        #message-box h2 {
+            margin-top: 0;
+            color: #d35400;
+            font-size: 1.5em;
+        }
+
+        #message-box p {
+            margin-bottom: 10px; 
+            font-size: 1em;
+            color: #2c3e50;
+        }
+        
+        #message-box p:last-of-type {
+            font-weight: bold;
+            color: #2980b9;
+            margin-bottom: 20px;
+        }
+
+
+        #restart-button {
+            background-color: #27ae60;
+            color: white;
+            border: 3px solid #16a085;
+            padding: 10px 20px;
+            text-transform: uppercase;
+            font-size: 0.8em;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 4px #16a085;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        #restart-button:hover {
+            background-color: #2ecc71;
+        }
+
+        #restart-button:active {
+            box-shadow: 0 1px #16a085;
+            transform: translateY(3px);
+        }
+
+        /* Responsive adjustments (unchanged) */
+        @media (max-width: 600px) {
+            #score-display {
+                font-size: 2em;
+                top: 15px;
+            }
+            #message-box {
+                width: 80%;
+                padding: 15px;
+            }
+            #message-box h2 {
+                font-size: 1.2em;
+            }
+            #restart-button {
+                font-size: 0.7em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="score-display">0</div>
+        <canvas id="flappyCanvas"></canvas>
+        <div id="message-box">
+            <h2 id="message-title">Game Over!</h2>
+            <p>Score: <span id="final-score">0</span></p>
+            <p>High Score: <span id="high-score-display">0</span></p>
+            <button id="restart-button">Restart Game</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('flappyCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score-display');
+        const messageBox = document.getElementById('message-box');
+        const finalScoreSpan = document.getElementById('final-score');
+        const highScoreDisplaySpan = document.getElementById('high-score-display');
+        const restartButton = document.getElementById('restart-button');
+
+        // --- Game Constants (Mostly Unchanged) ---
+        const EAGLE_RADIUS = 20; // Slightly larger for an eagle
+        const TREE_WIDTH = 60; // Wider trees
+        const TREE_GAP = 160; // Slightly bigger gap
+        const MOVE_SPEED = 2; // Pipe speed renamed to move speed
+        const GRAVITY = 0.5;
+        const JUMP_VELOCITY = -8;
+        const TREE_SPAWN_INTERVAL = 100;
+        const HIGH_SCORE_KEY = 'eagleFlightHighScore'; // Key changed
+
+        // --- Game State ---
+        let eagle; // Renamed bird to eagle
+        let trees = []; // Renamed pipes to trees
+        let score = 0;
+        let highScore = 0; 
+        let isGameOver = false;
+        let frameCount = 0;
+        let gameLoopId;
+
+        // --- Utility Functions (Mostly Unchanged) ---
+        function loadHighScore() {
+            const storedScore = localStorage.getItem(HIGH_SCORE_KEY);
+            highScore = storedScore ? parseInt(storedScore, 10) : 0;
+        }
+
+        function resizeCanvas() {
+            canvas.width = 480;
+            canvas.height = 700;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+
+        // --- Game Objects ---
+
+        class Eagle { // Renamed Bird to Eagle
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.velocity = 0;
+                this.radius = EAGLE_RADIUS; // Using the new constant
+            }
+
+            draw() {
+                const r = this.radius;
+                const wingFlap = Math.sin(frameCount * 0.4) * (r / 3); // Simple animation
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                // Rotation for nose dive/climb
+                const maxRotation = Math.PI / 6;
+                const rotation = Math.min(maxRotation, Math.max(-maxRotation, this.velocity * 0.05));
+                ctx.rotate(rotation);
+
+                // 1. Brown Body
+                ctx.fillStyle = '#654321'; 
+                ctx.beginPath();
+                ctx.ellipse(0, 0, r * 1.3, r, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 2. White Head (Draw over the body)
+                ctx.fillStyle = '#f5f5dc'; 
+                ctx.beginPath();
+                ctx.arc(r * 0.6, -r * 0.2, r * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 3. Yellow Beak
+                ctx.fillStyle = '#f39c12'; 
+                ctx.beginPath();
+                ctx.moveTo(r * 1.3, 0);
+                ctx.lineTo(r * 1.8, -r * 0.3);
+                ctx.lineTo(r * 1.8, r * 0.3);
+                ctx.fill();
+
+                // 4. Brown Wings (simple representation)
+                ctx.fillStyle = '#5a403a'; 
+                // Top Wing
+                ctx.beginPath();
+                ctx.moveTo(0, r * 0.5);
+                ctx.lineTo(-r * 2.5, r * 0.5 - wingFlap);
+                ctx.lineTo(-r * 2, r * 0.5 + r * 0.5);
+                ctx.fill();
+
+                // Bottom Wing
+                ctx.beginPath();
+                ctx.moveTo(0, -r * 0.5);
+                ctx.lineTo(-r * 2.5, -r * 0.5 + wingFlap);
+                ctx.lineTo(-r * 2, -r * 0.5 - r * 0.5);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            update() {
+                this.velocity += GRAVITY;
+                this.y += this.velocity;
+            }
+
+            flap() {
+                if (!isGameOver) {
+                    this.velocity = JUMP_VELOCITY;
+                }
+            }
+        }
+
+        class Tree { // Renamed Pipe to Tree
+            constructor(x, gapY) {
+                this.x = x;
+                this.width = TREE_WIDTH;
+                this.gapY = gapY; // Y position of the center of the gap
+                this.gap = TREE_GAP;
+                this.passed = false;
+            }
+
+            draw() {
+                // 1. Draw Trunks (The actual collision box part)
+                ctx.fillStyle = '#8B4513'; // Brown trunk
+                const trunkWidth = this.width / 3;
+                const trunkX = this.x + (this.width - trunkWidth) / 2;
+                
+                // Top Trunk
+                ctx.fillRect(trunkX, 0, trunkWidth, this.gapY - this.gap / 2);
+                // Bottom Trunk (The tree "growing" from the ground)
+                ctx.fillRect(trunkX, this.gapY + this.gap / 2, trunkWidth, canvas.height - (this.gapY + this.gap / 2) - 90);
+                
+                // 2. Draw Green Evergreen Foliage (More visual, extends beyond the trunk)
+                ctx.fillStyle = '#228B22'; // Forest Green
+                
+                // Top Tree (Foliage)
+                const topTreeTipY = this.gapY - this.gap / 2;
+                const topTreeBaseY = topTreeTipY + 40; // Base of the triangle
+                const topTreeHeight = topTreeBaseY;
+                
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, 0); // Tip at the top of the canvas
+                ctx.lineTo(this.x + this.width, topTreeBaseY);
+                ctx.lineTo(this.x, topTreeBaseY);
+                ctx.closePath();
+                ctx.fill();
+
+                // Bottom Tree (Foliage)
+                const bottomTreeBaseY = this.gapY + this.gap / 2;
+                const floorHeight = 90;
+                const bottomTreeTipY = canvas.height - floorHeight; // Tip rests on the floor
+                const bottomTreeHeight = bottomTreeTipY - bottomTreeBaseY;
+
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, bottomTreeTipY); // Tip rests on the ground line
+                ctx.lineTo(this.x + this.width, bottomTreeBaseY);
+                ctx.lineTo(this.x, bottomTreeBaseY);
+                ctx.closePath();
+                ctx.fill();
+
+                // Note: The collision check still uses the original rectangular bounds of the pipes for simplicity
+                // and consistent difficulty, even though the visual is a tree.
+            }
+
+            update() {
+                this.x -= MOVE_SPEED; // Using MOVE_SPEED
+            }
+        }
+
+
+        // --- Game Logic ---
+
+        function drawFloor() {
+            const floorHeight = 90; // Reduced floor height slightly
+            // Dark Brown/Earth
+            ctx.fillStyle = '#583a21'; 
+            ctx.fillRect(0, canvas.height - floorHeight, canvas.width, floorHeight);
+
+            // Green grass line (lighter top border)
+            ctx.fillStyle = '#38761d';
+            ctx.fillRect(0, canvas.height - floorHeight, canvas.width, 10);
+        }
+
+        function checkCollisions() {
+            // 1. Check top/bottom collision
+            if (eagle.y - eagle.radius <= 0 || eagle.y + eagle.radius >= canvas.height - 90) { 
+                endGame();
+                return;
+            }
+
+            // 2. Check tree collision (using original rectangular logic for the hitbox)
+            for (let i = 0; i < trees.length; i++) {
+                const t = trees[i]; // Renamed p to t
+                
+                // Check if eagle is horizontally aligned with tree hitbox
+                if (eagle.x + eagle.radius > t.x && eagle.x - eagle.radius < t.x + t.width) {
+                    
+                    const topTreeBottomY = t.gapY - t.gap / 2;
+                    const bottomTreeTopY = t.gapY + t.gap / 2;
+
+                    // Check collision with top tree OR bottom tree
+                    if (eagle.y - eagle.radius < topTreeBottomY || eagle.y + eagle.radius > bottomTreeTopY) {
+                        endGame();
+                        return;
+                    }
+
+                    // Check for scoring
+                    if (!t.passed && eagle.x > t.x + t.width) {
+                        score++;
+                        t.passed = true;
+                        scoreDisplay.textContent = score;
+                    }
+                }
+            }
+        }
+
+        function spawnTree() { // Renamed spawnPipe to spawnTree
+            const minGapY = 150;
+            const maxGapY = canvas.height - 150 - 90; 
+
+            const randomGapY = Math.floor(Math.random() * (maxGapY - minGapY + 1)) + minGapY;
+            trees.push(new Tree(canvas.width, randomGapY)); // Using new Tree class
+        }
+
+        function updateGame() {
+            frameCount++;
+
+            // 1. Eagle update
+            eagle.update();
+
+            // 2. Trees update and spawning
+            for (let i = trees.length - 1; i >= 0; i--) {
+                trees[i].update();
+                // Remove trees that are off-screen
+                if (trees[i].x + trees[i].width < 0) {
+                    trees.splice(i, 1);
+                }
+            }
+
+            // Spawn new tree
+            if (frameCount % TREE_SPAWN_INTERVAL === 0) {
+                spawnTree();
+            }
+
+            // 3. Collision check
+            checkCollisions();
+        }
+
+        function drawGame() {
+            // Clear canvas
+            ctx.fillStyle = '#70c5ce';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw all trees
+            trees.forEach(t => t.draw());
+
+            // Draw floor
+            drawFloor();
+
+            // Draw eagle
+            eagle.draw();
+        }
+
+        function gameLoop() {
+            if (isGameOver) {
+                cancelAnimationFrame(gameLoopId);
+                return;
+            }
+
+            updateGame();
+            drawGame();
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem(HIGH_SCORE_KEY, highScore);
+                document.getElementById('message-title').textContent = "NEW HIGH SCORE!";
+                document.getElementById('message-title').style.color = "#2980b9"; 
+            } else {
+                document.getElementById('message-title').textContent = "EAGLE DOWN!"; // Changed message
+                document.getElementById('message-title').style.color = "#d35400"; 
+            }
+
+            finalScoreSpan.textContent = score;
+            highScoreDisplaySpan.textContent = highScore; 
+            messageBox.style.display = 'block';
+        }
+
+        function resetGame() {
+            isGameOver = false;
+            score = 0;
+            frameCount = 0;
+            scoreDisplay.textContent = score;
+            trees = []; // Reset trees
+            // Re-initialize eagle to starting position
+            eagle = new Eagle(canvas.width / 4, canvas.height / 2); // Using new Eagle class
+            
+            highScoreDisplaySpan.textContent = highScore; 
+
+            messageBox.style.display = 'none';
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+
+        // --- Event Listeners and Initialization (Unchanged) ---
+
+        function handleFlap(event) {
+            if (event.type === 'touchstart') {
+                event.preventDefault(); 
+            }
+            if (isGameOver) {
+                return; 
+            }
+            eagle.flap(); // Flap the eagle
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault(); 
+                handleFlap(e);
+            }
+        });
+        canvas.addEventListener('mousedown', handleFlap);
+        canvas.addEventListener('touchstart', handleFlap);
+
+        restartButton.addEventListener('click', resetGame);
+
+        window.onload = function() {
+            resizeCanvas();
+            loadHighScore(); 
+            resetGame(); 
+        };
+
+    </script>
+</body>
+</html>
