@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird Leaderboard</title>
+    <style>
+        /* Base styling and font */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #87CEEB 0%, #1E90FF 100%); /* Sky gradient */
+            font-family: 'Press Start 2P', cursive;
+            overflow: auto; /* Allow scrolling if content is long */
+            padding: 20px;
+        }
+
+        #main-app-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+            max-width: 1000px;
+            width: 95%;
+        }
+
+        #game-and-leaderboard {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        #game-container {
+            position: relative;
+            background: #3c3c3c;
+            border-radius: 12px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 0 5px rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        canvas {
+            background-color: #70c5ce; /* Game sky */
+            display: block;
+            border-radius: 8px;
+            touch-action: manipulation;
+            width: 480px; /* Fixed width for canvas, will shrink on small screens */
+            height: 700px; /* Fixed height for canvas, will shrink on small screens */
+            border: 4px solid #1c2833;
+        }
+
+        #score-display {
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            text-shadow: 3px 3px 0px #1c2833;
+            font-size: 2.5em;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #message-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            z-index: 20;
+            border: 4px solid #1c2833;
+            display: none;
+            max-width: 80%;
+        }
+
+        #message-box h2 {
+            margin-top: 0;
+            color: #d35400;
+            font-size: 1.5em;
+        }
+
+        #message-box p {
+            margin-bottom: 10px;
+            font-size: 1em;
+            color: #2c3e50;
+        }
+
+        #restart-button {
+            background-color: #27ae60;
+            color: white;
+            border: 3px solid #16a085;
+            padding: 10px 20px;
+            text-transform: uppercase;
+            font-size: 0.8em;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 4px #16a085;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        #restart-button:active {
+            box-shadow: 0 1px #16a085;
+            transform: translateY(3px);
+        }
+        
+        /* Leaderboard Styling */
+        #leaderboard-container {
+            width: 350px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-height: 730px; /* Align height with game container */
+            overflow-y: auto;
+        }
+
+        #leaderboard-container h3 {
+            font-size: 1.2em;
+            color: #2c3e50;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #f1c40f;
+            padding-bottom: 5px;
+        }
+        
+        #leaderboard-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        #leaderboard-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #ecf0f1;
+            border-radius: 6px;
+            font-size: 0.8em;
+            color: #34495e;
+            transition: background-color 0.2s;
+        }
+        
+        #leaderboard-list li.highlight {
+            background: #3498db;
+            color: white;
+            font-weight: bold;
+        }
+
+        .score-rank {
+            font-weight: bold;
+            color: #e67e22;
+            width: 20px;
+            flex-shrink: 0;
+        }
+
+        .score-value {
+            font-weight: bold;
+            color: #27ae60;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .user-id-short {
+            margin-left: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 60%;
+        }
+
+        #user-info {
+            padding: 10px;
+            background: #1c2833;
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 0.7em;
+            text-align: center;
+            overflow-wrap: break-word; /* Ensure long ID breaks */
+        }
+        
+        #user-id-display {
+            font-size: 0.9em;
+            color: #f1c40f;
+            font-weight: bold;
+            word-break: break-all;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1000px) {
+            #game-and-leaderboard {
+                flex-direction: column;
+                align-items: center;
+            }
+            canvas {
+                width: 95vw;
+                height: 600px;
+                max-width: 480px;
+            }
+            #leaderboard-container {
+                width: 100%;
+                max-width: 480px;
+            }
+        }
+        @media (max-width: 600px) {
+            #score-display {
+                font-size: 1.8em;
+                top: 15px;
+            }
+            #message-box {
+                width: 80%;
+                padding: 15px;
+            }
+            #message-box h2 {
+                font-size: 1.2em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="main-app-container">
+        <!-- User ID Display (MANDATORY for multi-user apps) -->
+        <div id="user-info">
+            Your Player ID: <span id="user-id-display">Loading...</span>
+        </div>
+        
+        <div id="game-and-leaderboard">
+            <!-- Game Container -->
+            <div id="game-container">
+                <div id="score-display">0</div>
+                <canvas id="flappyCanvas"></canvas>
+                <div id="message-box">
+                    <h2 id="message-title">Game Over!</h2>
+                    <p>Score: <span id="final-score">0</span></p>
+                    <p>Highest Score Saved!</p>
+                    <button id="restart-button">Restart Game</button>
+                </div>
+                <!-- Loading Indicator for Firestore -->
+                <div id="loading-indicator" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; background: rgba(0,0,0,0.7); color: white; padding: 15px; border-radius: 8px; font-size: 1em;">
+                    Loading Game Data...
+                </div>
+            </div>
+            
+            <!-- Leaderboard Container -->
+            <div id="leaderboard-container">
+                <h3>Global Top 10 Scores</h3>
+                <ul id="leaderboard-list">
+                    <!-- Scores will be dynamically inserted here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Firebase/Firestore Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Enable debug logging for Firebase
+        setLogLevel('Debug');
+
+        // --- Firebase Initialization and Globals ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-flappy-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app;
+        let db;
+        let auth;
+        let currentUserId = null;
+        let isAuthReady = false;
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('flappyCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score-display');
+        const messageBox = document.getElementById('message-box');
+        const finalScoreSpan = document.getElementById('final-score');
+        const restartButton = document.getElementById('restart-button');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const loadingIndicator = document.getElementById('loading-indicator');
+
+        // --- Game Constants ---
+        const BIRD_RADIUS = 15;
+        const PIPE_WIDTH = 50;
+        const PIPE_GAP = 150;
+        const PIPE_SPEED = 2;
+        const GRAVITY = 0.5;
+        const JUMP_VELOCITY = -8;
+        const PIPE_SPAWN_INTERVAL = 100; // Frames
+
+        // --- Game State ---
+        let bird;
+        let pipes = [];
+        let score = 0;
+        let isGameOver = false;
+        let frameCount = 0;
+        let gameLoopId;
+
+        // --- Utility Functions ---
+
+        /**
+         * Real-time function to display the global leaderboard.
+         */
+        function setupLeaderboardListener() {
+            if (!db) {
+                console.error("Firestore not initialized.");
+                return;
+            }
+
+            const leaderboardCollectionRef = collection(db, `artifacts/${appId}/public/data/leaderboard`);
+
+            // Query for the top 10 scores, sorted by score descending
+            const q = query(leaderboardCollectionRef, orderBy("score", "desc"), limit(10));
+
+            onSnapshot(q, (snapshot) => {
+                leaderboardList.innerHTML = ''; // Clear existing list
+                let rank = 1;
+
+                if (snapshot.empty) {
+                    leaderboardList.innerHTML = '<li>No scores yet! Be the first!</li>';
+                }
+
+                snapshot.forEach((doc) => {
+                    const scoreData = doc.data();
+                    const isCurrentUser = scoreData.userId === currentUserId;
+
+                    const listItem = document.createElement('li');
+                    listItem.className = isCurrentUser ? 'highlight' : '';
+                    listItem.innerHTML = `
+                        <span class="score-rank">${rank}.</span>
+                        <span class="score-value">${scoreData.score}</span>
+                        <span class="user-id-short">${isCurrentUser ? 'YOU' : scoreData.userId}</span>
+                    `;
+                    leaderboardList.appendChild(listItem);
+                    rank++;
+                });
+                console.log("Leaderboard updated.");
+            }, (error) => {
+                console.error("Error setting up leaderboard listener:", error);
+            });
+        }
+
+        /**
+         * Saves the current player's score to Firestore.
+         */
+        async function saveScore(newScore) {
+            if (!db || !currentUserId || newScore === 0) return;
+
+            const leaderboardCollectionRef = collection(db, `artifacts/${appId}/public/data/leaderboard`);
+
+            try {
+                // Save the score, user ID, and a timestamp for potential sorting by time
+                await addDoc(leaderboardCollectionRef, {
+                    score: newScore,
+                    userId: currentUserId,
+                    timestamp: serverTimestamp(),
+                    appId: appId
+                });
+                console.log("Score saved successfully:", newScore);
+            } catch (e) {
+                console.error("Error saving score to Firestore:", e);
+            }
+        }
+
+        /**
+         * Initializes Firebase, signs the user in, and starts listeners.
+         */
+        async function initializeFirebase() {
+            try {
+                loadingIndicator.style.display = 'block';
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        userIdDisplay.textContent = currentUserId;
+                        isAuthReady = true;
+                        
+                        // Start the game logic only after authentication is ready
+                        resizeCanvas();
+                        resetGame();
+                        setupLeaderboardListener(); // Start listening for leaderboard changes
+                    } else {
+                        userIdDisplay.textContent = 'ERROR: Sign In Failed';
+                        isAuthReady = true;
+                    }
+                    loadingIndicator.style.display = 'none';
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                loadingIndicator.textContent = "Error: Failed to connect to database.";
+            }
+        }
+
+        /**
+         * Resizes the canvas to maintain aspect ratio and fill the container.
+         */
+        function resizeCanvas() {
+            // Set fixed logical dimensions
+            canvas.width = 480;
+            canvas.height = 700;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+
+        // --- Game Objects ---
+
+        class Bird {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.velocity = 0;
+                this.radius = BIRD_RADIUS;
+            }
+
+            draw() {
+                ctx.fillStyle = '#f1c40f'; // Yellow bird
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Simple eye
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(this.x + this.radius / 2.5, this.y - this.radius / 4, this.radius / 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Simple beak
+                ctx.fillStyle = '#e67e22'; // Orange beak
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.radius, this.y - 5);
+                ctx.lineTo(this.x + this.radius + 10, this.y);
+                ctx.lineTo(this.x + this.radius, this.y + 5);
+                ctx.fill();
+            }
+
+            update() {
+                this.velocity += GRAVITY;
+                this.y += this.velocity;
+            }
+
+            flap() {
+                if (!isGameOver) {
+                    this.velocity = JUMP_VELOCITY;
+                }
+            }
+        }
+
+        class Pipe {
+            constructor(x, gapY) {
+                this.x = x;
+                this.width = PIPE_WIDTH;
+                this.gapY = gapY; // Y position of the center of the gap
+                this.gap = PIPE_GAP;
+                this.passed = false;
+            }
+
+            draw() {
+                ctx.fillStyle = '#2ecc71'; // Green pipe
+                
+                // Top Pipe
+                ctx.fillRect(this.x, 0, this.width, this.gapY - this.gap / 2);
+                // Bottom Pipe
+                ctx.fillRect(this.x, this.gapY + this.gap / 2, this.width, canvas.height - (this.gapY + this.gap / 2));
+
+                // Add pipe border/shadow (for better definition)
+                ctx.strokeStyle = '#16a085';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(this.x, 0, this.width, this.gapY - this.gap / 2);
+                ctx.strokeRect(this.x, this.gapY + this.gap / 2, this.width, canvas.height - (this.gapY + this.gap / 2));
+            }
+
+            update() {
+                this.x -= PIPE_SPEED;
+            }
+        }
+
+
+        // --- Game Logic ---
+
+        function drawFloor() {
+            const floorHeight = 100;
+            ctx.fillStyle = '#2c3e50'; // Dark ground
+            ctx.fillRect(0, canvas.height - floorHeight, canvas.width, floorHeight);
+
+            // Draw grass/texture (lighter top border)
+            ctx.fillStyle = '#27ae60';
+            ctx.fillRect(0, canvas.height - floorHeight, canvas.width, 10);
+        }
+
+        function checkCollisions() {
+            // 1. Check top/bottom collision
+            if (bird.y - bird.radius <= 0 || bird.y + bird.radius >= canvas.height - 90) { // 90 is floor height
+                endGame();
+                return;
+            }
+
+            // 2. Check pipe collision
+            for (let i = 0; i < pipes.length; i++) {
+                const p = pipes[i];
+
+                // Check if bird is horizontally aligned with pipe
+                if (bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + p.width) {
+                    // Check collision with top pipe OR bottom pipe
+                    const topPipeBottomY = p.gapY - p.gap / 2;
+                    const bottomPipeTopY = p.gapY + p.gap / 2;
+
+                    if (bird.y - bird.radius < topPipeBottomY || bird.y + bird.radius > bottomPipeTopY) {
+                        endGame();
+                        return;
+                    }
+
+                    // Check for scoring
+                    if (!p.passed && bird.x > p.x + p.width) {
+                        score++;
+                        p.passed = true;
+                        scoreDisplay.textContent = score;
+                    }
+                }
+            }
+        }
+
+        function spawnPipe() {
+            // Gap center can be anywhere between 150px from top and 150px from bottom (accounting for floor)
+            const minGapY = 150;
+            const maxGapY = canvas.height - 150 - 90; // -90 for floor height
+
+            const randomGapY = Math.floor(Math.random() * (maxGapY - minGapY + 1)) + minGapY;
+            pipes.push(new Pipe(canvas.width, randomGapY));
+        }
+
+        function updateGame() {
+            frameCount++;
+
+            // 1. Bird update
+            bird.update();
+
+            // 2. Pipes update and spawning
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                pipes[i].update();
+                // Remove pipes that are off-screen
+                if (pipes[i].x + pipes[i].width < 0) {
+                    pipes.splice(i, 1);
+                }
+            }
+
+            // Spawn new pipe
+            if (frameCount % PIPE_SPAWN_INTERVAL === 0) {
+                spawnPipe();
+            }
+
+            // 3. Collision check
+            checkCollisions();
+        }
+
+        function drawGame() {
+            // Clear canvas
+            ctx.fillStyle = '#70c5ce';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw all pipes
+            pipes.forEach(p => p.draw());
+
+            // Draw floor
+            drawFloor();
+
+            // Draw bird
+            bird.draw();
+        }
+
+        function gameLoop() {
+            if (isGameOver) {
+                cancelAnimationFrame(gameLoopId);
+                return;
+            }
+
+            updateGame();
+            drawGame();
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            
+            // Save the score to the global leaderboard
+            if (score > 0 && currentUserId) {
+                saveScore(score);
+                document.getElementById('message-title').textContent = "SCORE SUBMITTED!";
+                document.getElementById('message-title').style.color = "#27ae60"; // Green for success
+            } else {
+                document.getElementById('message-title').textContent = "GAME OVER!";
+                document.getElementById('message-title').style.color = "#d35400"; // Orange default
+            }
+
+            // Update message box content and show it
+            finalScoreSpan.textContent = score;
+            messageBox.style.display = 'block';
+            console.log("Game Over! Score:", score);
+        }
+
+        function resetGame() {
+            if (!isAuthReady) {
+                console.log("Authentication not ready, waiting to reset game.");
+                return;
+            }
+
+            isGameOver = false;
+            score = 0;
+            frameCount = 0;
+            scoreDisplay.textContent = score;
+            pipes = [];
+            
+            // Re-initialize bird to starting position
+            bird = new Bird(canvas.width / 4, canvas.height / 2); 
+
+            messageBox.style.display = 'none';
+
+            // Start the loop
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+
+        // --- Event Listeners and Initialization ---
+
+        function handleFlap(event) {
+            // Prevent scrolling on mobile devices when tapping
+            if (event.type === 'touchstart') {
+                event.preventDefault();
+            }
+            if (isGameOver || !isAuthReady) {
+                return;
+            }
+            bird.flap();
+        }
+
+        // For desktop: Spacebar and mouse click
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault(); // Prevent space from scrolling the page
+                handleFlap(e);
+            }
+        });
+        canvas.addEventListener('mousedown', handleFlap);
+        
+        // For mobile: Touch screen
+        canvas.addEventListener('touchstart', handleFlap);
+
+        // Restart button
+        restartButton.addEventListener('click', resetGame);
+
+
+        // Initialize Firebase and start the app
+        window.onload = initializeFirebase;
+
+    </script>
+</body>
+</html>
