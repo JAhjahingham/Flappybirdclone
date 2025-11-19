@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird Clone</title>
+    <style>
+        /* Base styling and font */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            display: flex;
+            justify-content: flex-start;
+            flex-direction: column;
+            
+            height: 100vh; 
+            min-height: 100%;
+            margin: 0;
+            padding-top: 0; 
+            
+            align-items: center;
+            background: linear-gradient(135deg, #87CEEB 0%, #1E90FF 100%); /* Sky gradient */
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden; 
+        }
+
+        /* ------------------ AD BANNER STYLES ------------------ */
+        #ad-banner {
+            width: 95%; 
+            max-width: 400px; 
+            background-color: #34495e; 
+            padding: 5px 0; 
+            text-align: center;
+            margin-bottom: 5px; /* Reduced margin */
+            margin-top: 5px; 
+            border: 2px solid #f39c12; 
+            border-radius: 6px; 
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
+            transition: transform 0.2s;
+        }
+
+        #ad-banner:hover {
+            transform: translateY(-1px); 
+        }
+
+        #ad-banner a {
+            text-decoration: none;
+            color: #ecf0f1;
+            font-size: 0.65em; 
+            display: block;
+            line-height: 1.2; 
+        }
+
+        #ad-banner strong {
+            display: block;
+            font-size: 1.0em;
+            color: #2ecc71; 
+            text-shadow: 1px 1px 0px #1c2833;
+            margin: 2px 0;
+        }
+        /* ------------------ END AD BANNER STYLES ------------------ */
+
+
+        /* ------------------ GAME CONTAINER STYLES ------------------ */
+        #game-container {
+            position: relative;
+            background: #3c3c3c; 
+            border-radius: 12px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 0 5px rgba(255, 255, 255, 0.2);
+            /* GREATLY REDUCED PADDING to make canvas fill more */
+            padding: 5px; 
+            /* Removed max-width to allow better filling on large screens */
+            width: 95vw; 
+            max-height: 95vh; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1; 
+        }
+
+        canvas {
+            background-color: #70c5ce; 
+            display: block;
+            border-radius: 8px;
+            touch-action: manipulation; 
+            width: 100%; /* Fill container width */
+            /* Use a common ratio for Flappy Bird to ensure it looks right */
+            aspect-ratio: 480 / 700; 
+            border: 4px solid #1c2833;
+        }
+        /* ------------------ END GAME CONTAINER STYLES ------------------ */
+
+        #score-display {
+            position: absolute;
+            top: 15px; /* Adjusted position due to reduced container padding */
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            text-shadow: 3px 3px 0px #1c2833;
+            /* Using a relative font size so it scales better with canvas */
+            font-size: 5vw; 
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #message-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            z-index: 20;
+            border: 4px solid #1c2833;
+            display: none; 
+        }
+
+        #message-box h2 {
+            margin-top: 0;
+            color: #d35400;
+            font-size: 1.5em;
+        }
+
+        #message-box p {
+            margin-bottom: 10px; 
+            font-size: 1em;
+            color: #2c3e50;
+        }
+        
+        #message-box p:last-of-type {
+            font-weight: bold;
+            color: #2980b9;
+            margin-bottom: 20px;
+        }
+
+
+        #restart-button {
+            background-color: #27ae60;
+            color: white;
+            border: 3px solid #16a085;
+            padding: 10px 20px;
+            text-transform: uppercase;
+            font-size: 0.8em;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 4px #16a085;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        #restart-button:hover {
+            background-color: #2ecc71;
+        }
+
+        #restart-button:active {
+            box-shadow: 0 1px #16a085;
+            transform: translateY(3px);
+        }
+
+        /* Responsive adjustments for smaller screens */
+        @media (max-width: 600px) {
+             #ad-banner {
+                margin-bottom: 5px; 
+                margin-top: 5px; 
+                padding: 4px 0;
+                width: 90%;
+            }
+            #ad-banner a {
+                font-size: 0.6em; 
+            }
+            #ad-banner strong {
+                font-size: 0.8em;
+                color: #2ecc71; 
+            }
+            #score-display {
+                font-size: 7vw; /* Increased relative size for mobile score */
+                top: 10px;
+            }
+            #game-container {
+                padding: 5px;
+            }
+            #message-box {
+                width: 80%;
+                padding: 15px;
+            }
+            #message-box h2 {
+                font-size: 1.2em;
+            }
+            #restart-button {
+                font-size: 0.7em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ad-banner">
+        <a href="https://92yankee.net" target="_blank">
+            <p>ADVERTISEMENT</p>
+            <strong>92YANKEE.NET</strong>
+            <p>Military Surplus & Tactical Gear</p>
+        </a>
+    </div>
+    <div id="game-container">
+        <div id="score-display">0</div>
+        <canvas id="flappyCanvas"></canvas>
+        <div id="message-box">
+            <h2 id="message-title">Game Over!</h2>
+            <p>Score: <span id="final-score">0</span></p>
+            <p>High Score: <span id="high-score-display">0</span></p>
+            <button id="restart-button">Restart Game</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('flappyCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score-display');
+        const messageBox = document.getElementById('message-box');
+        const finalScoreSpan = document.getElementById('final-score');
+        const highScoreDisplaySpan = document.getElementById('high-score-display');
+        const restartButton = document.getElementById('restart-button');
+
+        // --- Game Constants ---
+        const LOGICAL_WIDTH = 480; // The fixed logical width for all game math
+        const LOGICAL_HEIGHT = 700; // The fixed logical height for all game math
+        const BIRD_RADIUS = 15;
+        const PIPE_WIDTH = 50;
+        const PIPE_GAP = 150;
+        const PIPE_SPEED = 2;
+        const GRAVITY = 0.5;
+        const JUMP_VELOCITY = -8;
+        const PIPE_SPAWN_INTERVAL = 100; // Frames
+        const HIGH_SCORE_KEY = 'flappyHighScore';
+
+        // --- Game State ---
+        let bird;
+        let pipes = [];
+        let score = 0;
+        let highScore = 0; 
+        let isGameOver = false;
+        let frameCount = 0;
+        let gameLoopId;
+
+        // --- Utility Functions ---
+
+        function loadHighScore() {
+            const storedScore = localStorage.getItem(HIGH_SCORE_KEY);
+            highScore = storedScore ? parseInt(storedScore, 10) : 0;
+        }
+
+        /**
+         * Sets the internal canvas dimensions for drawing purposes.
+         * The game logic always uses LOGICAL_WIDTH and LOGICAL_HEIGHT.
+         */
+        function resizeCanvas() {
+            // Set fixed logical dimensions for the drawing context
+            canvas.width = LOGICAL_WIDTH;
+            canvas.height = LOGICAL_HEIGHT;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+
+        // --- Game Objects ---
+
+        class Bird {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.velocity = 0;
+                this.radius = BIRD_RADIUS;
+            }
+
+            draw() {
+                ctx.fillStyle = '#f1c40f'; 
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(this.x + this.radius / 2.5, this.y - this.radius / 4, this.radius / 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#e67e22'; 
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.radius, this.y - 5);
+                ctx.lineTo(this.x + this.radius + 10, this.y);
+                ctx.lineTo(this.x + this.radius, this.y + 5);
+                ctx.fill();
+            }
+
+            update() {
+                this.velocity += GRAVITY;
+                this.y += this.velocity;
+            }
+
+            flap() {
+                if (!isGameOver) {
+                    this.velocity = JUMP_VELOCITY;
+                }
+            }
+        }
+
+        class Pipe {
+            constructor(x, gapY) {
+                this.x = x;
+                this.width = PIPE_WIDTH;
+                this.gapY = gapY; 
+                this.gap = PIPE_GAP;
+                this.passed = false;
+            }
+
+            draw() {
+                ctx.fillStyle = '#2ecc71'; 
+                
+                // Top Pipe
+                ctx.fillRect(this.x, 0, this.width, this.gapY - this.gap / 2);
+                // Bottom Pipe
+                ctx.fillRect(this.x, this.gapY + this.gap / 2, this.width, LOGICAL_HEIGHT - (this.gapY + this.gap / 2));
+
+                // Add pipe border/shadow
+                ctx.strokeStyle = '#16a085';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(this.x, 0, this.width, this.gapY - this.gap / 2);
+                ctx.strokeRect(this.x, this.gapY + this.gap / 2, this.width, LOGICAL_HEIGHT - (this.gapY + this.gap / 2));
+            }
+
+            update() {
+                this.x -= PIPE_SPEED;
+            }
+        }
+
+
+        // --- Game Logic ---
+
+        function drawFloor() {
+            const floorHeight = 100;
+            ctx.fillStyle = '#2c3e50'; 
+            ctx.fillRect(0, LOGICAL_HEIGHT - floorHeight, LOGICAL_WIDTH, floorHeight);
+
+            ctx.fillStyle = '#27ae60';
+            ctx.fillRect(0, LOGICAL_HEIGHT - floorHeight, LOGICAL_WIDTH, 10);
+        }
+
+        function checkCollisions() {
+            const floorThreshold = LOGICAL_HEIGHT - 90; // 90 is floor height
+
+            // 1. Check top/bottom collision
+            if (bird.y - bird.radius <= 0 || bird.y + bird.radius >= floorThreshold) { 
+                endGame();
+                return;
+            }
+
+            // 2. Check pipe collision
+            for (let i = 0; i < pipes.length; i++) {
+                const p = pipes[i];
+
+                if (bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + p.width) {
+                    const topPipeBottomY = p.gapY - p.gap / 2;
+                    const bottomPipeTopY = p.gapY + p.gap / 2;
+
+                    if (bird.y - bird.radius < topPipeBottomY || bird.y + bird.radius > bottomPipeTopY) {
+                        endGame();
+                        return;
+                    }
+
+                    // Check for scoring
+                    if (!p.passed && bird.x > p.x + p.width) {
+                        score++;
+                        p.passed = true;
+                        scoreDisplay.textContent = score;
+                    }
+                }
+            }
+        }
+
+        function spawnPipe() {
+            const minGapY = 150;
+            const maxGapY = LOGICAL_HEIGHT - 150 - 90; // -90 for floor height
+
+            const randomGapY = Math.floor(Math.random() * (maxGapY - minGapY + 1)) + minGapY;
+            pipes.push(new Pipe(LOGICAL_WIDTH, randomGapY));
+        }
+
+        function updateGame() {
+            frameCount++;
+            bird.update();
+
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                pipes[i].update();
+                if (pipes[i].x + pipes[i].width < 0) {
+                    pipes.splice(i, 1);
+                }
+            }
+
+            if (frameCount % PIPE_SPAWN_INTERVAL === 0) {
+                spawnPipe();
+            }
+
+            checkCollisions();
+        }
+
+        function drawGame() {
+            ctx.fillStyle = '#70c5ce';
+            ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+
+            pipes.forEach(p => p.draw());
+            drawFloor();
+            bird.draw();
+        }
+
+        function gameLoop() {
+            if (isGameOver) {
+                cancelAnimationFrame(gameLoopId);
+                return;
+            }
+
+            updateGame();
+            drawGame();
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem(HIGH_SCORE_KEY, highScore);
+                document.getElementById('message-title').textContent = "NEW HIGH SCORE!";
+                document.getElementById('message-title').style.color = "#2980b9"; 
+            } else {
+                document.getElementById('message-title').textContent = "GAME OVER!";
+                document.getElementById('message-title').style.color = "#d35400"; 
+            }
+
+            finalScoreSpan.textContent = score;
+            highScoreDisplaySpan.textContent = highScore; 
+            messageBox.style.display = 'block';
+        }
+
+        function resetGame() {
+            isGameOver = false;
+            score = 0;
+            frameCount = 0;
+            scoreDisplay.textContent = score;
+            pipes = [];
+            // Use LOGICAL dimensions for placement
+            bird = new Bird(LOGICAL_WIDTH / 4, LOGICAL_HEIGHT / 2); 
+            
+            highScoreDisplaySpan.textContent = highScore; 
+
+            messageBox.style.display = 'none';
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+
+        // --- Event Listeners and Initialization ---
+
+        function handleFlap(event) {
+            if (event.type === 'touchstart') {
+                event.preventDefault();
+            }
+            if (isGameOver) {
+                return; 
+            }
+            bird.flap();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault(); 
+                handleFlap(e);
+            }
+        });
+        canvas.addEventListener('mousedown', handleFlap);
+        canvas.addEventListener('touchstart', handleFlap);
+        restartButton.addEventListener('click', resetGame);
+
+
+        window.onload = function() {
+            resizeCanvas();
+            loadHighScore(); 
+            resetGame(); 
+        };
+
+    </script>
+</body>
+</html>
